@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 import os
+import cv2
 
 class Agent:
 
@@ -35,6 +36,8 @@ class Agent:
 
 	def check_game_compatibility(self, game):
 		game_output_shape = (1, None) + game.get_frame().shape
+		print(game_output_shape)
+		print(self.model.input_shape)
 		if len(game_output_shape) != len(self.model.input_shape):
 			raise Exception('Dimension mismatch. Input shape of the model should be compatible with the game.')
 		else:
@@ -99,19 +102,21 @@ class Agent:
 				win_count += 1
 			if epsilon > final_epsilon and epoch >= observe:
 				epsilon -= delta
+			game.update_ai_model(model)
 			print("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon, win_count))
 
 	def play(self, game, nb_epoch=10, epsilon=0., visualize=True):
 		self.check_game_compatibility(game)
 		model = self.model
 		win_count = 0
-		frames = []
 		for epoch in range(nb_epoch):
 			game.reset()
+			print(game.pos)
 			self.clear_frames()
 			S = self.get_game_data(game)
 			if visualize:
-				frames.append(game.draw())
+				cv2.imshow(game.name, game.draw_img())
+				cv2.waitKey(300)
 			game_over = False
 			while not game_over:
 				if np.random.rand() < epsilon:
@@ -125,15 +130,9 @@ class Agent:
 				game.play(action)
 				S = self.get_game_data(game)
 				if visualize:
-					frames.append(game.draw())
+					cv2.imshow(game.name, game.draw_img())
+					cv2.waitKey(300)
 				game_over = game.is_over()
 			if game.is_won():
 				win_count += 1
 		print("Accuracy {} %".format(100. * win_count / nb_epoch))
-		if visualize:
-			if 'images' not in os.listdir('.'):
-				os.mkdir('images')
-			for i in range(len(frames)):
-				plt.imshow(frames[i], interpolation='none')
-				plt.savefig("images/" + game.name + str(i) + ".png")
- 
