@@ -12,7 +12,7 @@ class Agent:
 		if memory:
 			self.memory = memory
 		else:
-			self.memory = ExperienceReplay(memory_size)
+			self.memory = ExperienceReplay(memory_size, fast=False)
 		if not nb_frames and not model.input_shape[1]:
 			raise Exception("Missing argument : nb_frames not provided")
 		elif not nb_frames:
@@ -36,8 +36,6 @@ class Agent:
 
 	def check_game_compatibility(self, game):
 		game_output_shape = (1, None) + game.get_frame().shape
-		print(game_output_shape)
-		print(self.model.input_shape)
 		if len(game_output_shape) != len(self.model.input_shape):
 			raise Exception('Dimension mismatch. Input shape of the model should be compatible with the game.')
 		else:
@@ -80,7 +78,7 @@ class Agent:
 			S = self.get_game_data(game)
 			while not game_over:
 				if np.random.random() < epsilon or epoch < observe:
-					a = int(np.random.randint(game.nb_actions))
+					a = int(np.random.choice(game.get_possible_actions()))
 				else:
 					q = model.predict(S)
 					a = int(np.argmax(q[0]))
@@ -102,7 +100,6 @@ class Agent:
 				win_count += 1
 			if epsilon > final_epsilon and epoch >= observe:
 				epsilon -= delta
-			game.update_ai_model(model)
 			print("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon, win_count))
 
 	def play(self, game, nb_epoch=10, epsilon=0., visualize=True):
@@ -111,12 +108,11 @@ class Agent:
 		win_count = 0
 		for epoch in range(nb_epoch):
 			game.reset()
-			print(game.pos)
 			self.clear_frames()
 			S = self.get_game_data(game)
 			if visualize:
 				cv2.imshow(game.name, game.draw_img())
-				cv2.waitKey(300)
+				cv2.waitKey(150)
 			game_over = False
 			while not game_over:
 				if np.random.rand() < epsilon:
@@ -131,8 +127,9 @@ class Agent:
 				S = self.get_game_data(game)
 				if visualize:
 					cv2.imshow(game.name, game.draw_img())
-					cv2.waitKey(300)
+					cv2.waitKey(150)
 				game_over = game.is_over()
 			if game.is_won():
 				win_count += 1
+		cv2.destroyWindow(game.name)
 		print("Accuracy {} %".format(100. * win_count / nb_epoch))

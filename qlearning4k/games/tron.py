@@ -15,6 +15,7 @@ class Tron(Game):
 		self.points = np.array(self.points) 
 				
 		self.free = np.ones((4, 20, 30), dtype=np.bool)
+		self.state = np.zeros((4, 20, 30), dtype=np.float)
 		self.reset()
 	
 	@property 
@@ -37,6 +38,7 @@ class Tron(Game):
 
 	def deactivate(self, idx):
 		self.free[idx].fill(True)
+		self.state[idx].fill(0.0)
 		self.active[idx] = False
 
 	def is_free(self, point):
@@ -53,6 +55,7 @@ class Tron(Game):
 			self.deactivate(idx)
 		else:
 			self.free[idx][self.pos[idx][0]][self.pos[idx][1]] = False
+			self.dist_field(idx)
 
 	def play(self, action):
 		self.turn(0, action)
@@ -83,9 +86,10 @@ class Tron(Game):
 		return pa
 
 	def dist_field(self, idx):
-		df = np.zeros((20, 30), dtype=np.float)
 		if not self.active[idx]:
-			return df 
+			return 
+		df = self.state[idx]
+		df.fill(0.0)
 		q = Queue()
 		q.put(self.pos[idx])
 		while not q.empty():
@@ -94,18 +98,15 @@ class Tron(Game):
 				npos = p + self.dirs[i] 
 				if (not self.bad(npos) and df[npos[0]][npos[1]] == 0.0):
 					df[npos[0]][npos[1]] = df[p[0]][p[1]]
-		return df
 					
 	def get_state(self, idx=0):
-		order = list(range(4))
-		if idx > 0:
-			order[0], order[idx] = order[idx], order[0]
-		return np.array([self.dist_field(i) for i in order])
+		return np.roll(self.state,-idx,axis=0) if idx > 0 else self.state
 
 	def get_frame(self):
 		return self.get_state(0)
 
 	def ai(self, idx):
+		return np.random.choice(self.get_possible_actions(idx))
 		state = np.array([[self.get_state(idx)]])
 		q = self.model.predict(state)[0]
 		possible_actions = self.get_possible_actions(idx)

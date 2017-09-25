@@ -91,7 +91,7 @@ class ExperienceReplay(Memory):
         targets = (1 - delta) * Y[:batch_size] + delta * (r + gamma * (1 - game_over) * Qsa)
         self.batch_function = K.function(inputs=[samples], outputs=[S, targets])
 
-    def  one_hot(self, seq, num_classes):
+    def one_hot(self, seq, num_classes):
         return K.one_hot(K.reshape(K.cast(seq, "int32"), (-1, 1)), num_classes)
 
     def get_batch_fast(self, model, batch_size, gamma):
